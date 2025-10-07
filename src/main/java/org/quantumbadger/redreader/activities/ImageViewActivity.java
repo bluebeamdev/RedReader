@@ -55,6 +55,13 @@ import androidx.media3.datasource.DefaultHttpDataSource;
 import androidx.media3.exoplayer.hls.HlsMediaSource;
 import androidx.media3.datasource.cache.CacheDataSource;
 import androidx.media3.datasource.cache.SimpleCache;
+import androidx.media3.datasource.DataSource;
+import androidx.media3.datasource.okhttp.OkHttpDataSource;
+
+import okhttp3.OkHttpClient;
+
+import java.net.InetSocketAddress;
+import java.net.Proxy;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -1207,7 +1214,7 @@ public class ImageViewActivity extends ViewsBaseActivity
 			if (mIsDestroyed) {
 				return;
 			}
-			
+
 			Log.i(TAG, "Playing HLS via ExoPlayer: " + hlsUri);
 
 			// Headers + UA required by RedGifs
@@ -1220,21 +1227,34 @@ public class ImageViewActivity extends ViewsBaseActivity
 							"Chrome/124.0.0.0 Mobile Safari/537.36";
 
 			// Upstream HTTP (keeps your headers)
-			final DefaultHttpDataSource.Factory httpFactory =
-					new DefaultHttpDataSource.Factory()
-							.setUserAgent(userAgent)
-							.setDefaultRequestProperties(headers)
-							.setAllowCrossProtocolRedirects(true);
+			// Upstream that honors Tor (if enabled)
+			final DataSource.Factory upstreamFactory;
+			if (org.quantumbadger.redreader.common.TorCommon.isTorEnabled()) {
+				// Use Orbot's HTTP proxy (commonly 127.0.0.1:8118). If your users run SOCKS-only,
+				// use Proxy.Type.SOCKS and the SOCKS port instead.
+				final Proxy torProxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress("127.0.0.1", 8118));
+				final OkHttpClient okClient = new OkHttpClient.Builder()
+						.proxy(torProxy)
+						.build();
 
-			// Wrap upstream with cache
+				upstreamFactory = new OkHttpDataSource.Factory(okClient)
+						.setUserAgent(userAgent)
+						.setDefaultRequestProperties(headers);
+			} else {
+				upstreamFactory = new DefaultHttpDataSource.Factory()
+						.setUserAgent(userAgent)
+						.setDefaultRequestProperties(headers)
+						.setAllowCrossProtocolRedirects(true);
+			}
+
+// Wrap upstream with cache (no change)
 			final SimpleCache simpleCache =
-					org.quantumbadger.redreader.media.ExoCache.INSTANCE.get(getApplicationContext()
-					);
+					org.quantumbadger.redreader.media.ExoCache.INSTANCE.get(getApplicationContext());
 
 			final CacheDataSource.Factory cacheFactory =
 					new CacheDataSource.Factory()
 							.setCache(simpleCache)
-							.setUpstreamDataSourceFactory(httpFactory)
+							.setUpstreamDataSourceFactory(upstreamFactory)
 							.setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR);
 
 			// Build HLS media source USING THE CACHE
