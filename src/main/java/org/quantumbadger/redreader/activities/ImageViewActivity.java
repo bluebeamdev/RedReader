@@ -56,7 +56,7 @@ import androidx.media3.exoplayer.hls.HlsMediaSource;
 import androidx.media3.datasource.cache.CacheDataSource;
 import androidx.media3.datasource.cache.SimpleCache;
 import androidx.media3.datasource.DataSource;
-import androidx.media3.datasource.okhttp.OkHttpDataSource;
+
 
 import okhttp3.OkHttpClient;
 
@@ -1228,33 +1228,20 @@ public class ImageViewActivity extends ViewsBaseActivity
 
 			// Upstream HTTP (keeps your headers)
 			// Upstream that honors Tor (if enabled)
-			final DataSource.Factory upstreamFactory;
-			if (org.quantumbadger.redreader.common.TorCommon.isTorEnabled()) {
-				// Use Orbot's HTTP proxy (commonly 127.0.0.1:8118). If your users run SOCKS-only,
-				// use Proxy.Type.SOCKS and the SOCKS port instead.
-				final Proxy torProxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress("127.0.0.1", 8118));
-				final OkHttpClient okClient = new OkHttpClient.Builder()
-						.proxy(torProxy)
-						.build();
+			final DefaultHttpDataSource.Factory httpFactory =
+					new DefaultHttpDataSource.Factory()
+							.setUserAgent(userAgent)
+							.setDefaultRequestProperties(headers)
+							.setAllowCrossProtocolRedirects(true);
 
-				upstreamFactory = new OkHttpDataSource.Factory(okClient)
-						.setUserAgent(userAgent)
-						.setDefaultRequestProperties(headers);
-			} else {
-				upstreamFactory = new DefaultHttpDataSource.Factory()
-						.setUserAgent(userAgent)
-						.setDefaultRequestProperties(headers)
-						.setAllowCrossProtocolRedirects(true);
-			}
-
-// Wrap upstream with cache (no change)
+// Wrap upstream with cache
 			final SimpleCache simpleCache =
 					org.quantumbadger.redreader.media.ExoCache.INSTANCE.get(getApplicationContext());
 
 			final CacheDataSource.Factory cacheFactory =
 					new CacheDataSource.Factory()
 							.setCache(simpleCache)
-							.setUpstreamDataSourceFactory(upstreamFactory)
+							.setUpstreamDataSourceFactory(httpFactory)
 							.setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR);
 
 			// Build HLS media source USING THE CACHE
