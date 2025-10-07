@@ -45,6 +45,10 @@ import androidx.media3.ui.AspectRatioFrameLayout;
 import androidx.media3.ui.DefaultTimeBar;
 import androidx.media3.ui.PlayerView;
 import androidx.media3.ui.TimeBar;
+import androidx.media3.common.AudioAttributes;
+import androidx.media3.common.C;
+import androidx.media3.common.Tracks;
+import androidx.media3.common.Player;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
@@ -55,6 +59,7 @@ import org.quantumbadger.redreader.common.PrefsUtility;
 
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @OptIn(markerClass = UnstableApi.class)
 public class ExoPlayerWrapperView extends FrameLayout {
@@ -79,6 +84,40 @@ public class ExoPlayerWrapperView extends FrameLayout {
 	private float mCurrentPlaybackSpeed = 1.0f;
 
 	private boolean mReleased;
+
+
+	public void ensureAudioEnabledAndLogTracks(@androidx.annotation.Nullable final Runnable onNoAudio) {
+		// Make sure player will output audio
+		final AudioAttributes audioAttributes = new AudioAttributes.Builder()
+				.setUsage(C.USAGE_MEDIA)
+				.setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+				.build();
+		mVideoPlayer.setAudioAttributes(audioAttributes, /* handleAudioFocus= */ true);
+		if (mVideoPlayer.getVolume() == 0f) mVideoPlayer.setVolume(1f);
+
+		// Guard to run fallback only once
+		final AtomicBoolean fallbackTriggered = new AtomicBoolean(false);
+
+		mVideoPlayer.addListener(new Player.Listener() {
+			@Override
+			public void onTracksChanged(Tracks tracks) {
+				android.util.Log.i("ExoWrapper", "Tracks: " + tracks);
+
+				boolean hasAudio = false;
+				for (int gi = 0; gi < tracks.getGroups().size(); gi++) {
+					Tracks.Group g = tracks.getGroups().get(gi);
+					if (g.getType() == C.TRACK_TYPE_AUDIO) {
+						hasAudio = true;
+						break;
+					}
+				}
+
+				if (!hasAudio && onNoAudio != null && fallbackTriggered.compareAndSet(false, true)) {
+					onNoAudio.run(); // trigger embed fallback once
+				}
+			}
+		});
+	}
 
 	public ExoPlayerWrapperView(
 			@NonNull final Context context,
@@ -105,6 +144,7 @@ public class ExoPlayerWrapperView extends FrameLayout {
 		videoPlayerView.requestFocus();
 
 		mVideoPlayer.setMediaSource(mediaSource);
+
 		mVideoPlayer.prepare();
 
 		mVideoPlayer.setRepeatMode(Player.REPEAT_MODE_ONE);
