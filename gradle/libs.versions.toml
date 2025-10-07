@@ -47,6 +47,7 @@ androidx-webkit = "1.9.0"
 
 [libraries]
 media3-datasource = { module = "androidx.media3:media3-datasource", version.ref = "media3" }
+media3-datasource-okhttp = { module = "androidx.media3:media3-datasource-okhttp", version.ref = "media3" }
 media3-database  = { module = "androidx.media3:media3-database",  version.ref = "media3" }
 androidx-webkit = { module = "androidx.webkit:webkit", version.ref = "androidx-webkit" }
 androidx-annotation = { module = "androidx.annotation:annotation", version.ref = "androidx-annotation" }
@@ -59,6 +60,10 @@ androidx-recyclerview = { module = "androidx.recyclerview:recyclerview", version
 androidx-swiperefreshlayout = { module = "androidx.swiperefreshlayout:swiperefreshlayout", version.ref = "androidx-swiperefreshlayout" }
 androidx-window = { module = "androidx.window:window", version.ref = "androidx-window" }
 media3-exoplayer-hls = { module = "androidx.media3:media3-exoplayer-hls", version.ref = "media3" }
+
+
+
+
 commons-lang = { module = "org.apache.commons:commons-lang3", version.ref = "commons-lang" }
 commons-text = { module = "org.apache.commons:commons-text", version.ref = "commons-text" }
 google-flexbox = { module = "com.google.android.flexbox:flexbox", version.ref = "google-flexbox" }
