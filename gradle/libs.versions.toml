@@ -47,7 +47,6 @@ androidx-webkit = "1.9.0"
 
 [libraries]
 media3-datasource = { module = "androidx.media3:media3-datasource", version.ref = "media3" }
-media3-datasource-okhttp = { module = "androidx.media3:media3-datasource-okhttp", version.ref = "media3" }
 media3-database  = { module = "androidx.media3:media3-database",  version.ref = "media3" }
 androidx-webkit = { module = "androidx.webkit:webkit", version.ref = "androidx-webkit" }
 androidx-annotation = { module = "androidx.annotation:annotation", version.ref = "androidx-annotation" }

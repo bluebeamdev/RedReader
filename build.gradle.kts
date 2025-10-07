@@ -37,7 +37,7 @@ dependencies {
 	implementation(libs.androidx.swiperefreshlayout)
 	implementation(libs.androidx.window)
 	implementation(libs.okhttp)                     // com.squareup.okhttp3:okhttp
-	implementation(libs.media3.datasource.okhttp)
+
 
 
 
