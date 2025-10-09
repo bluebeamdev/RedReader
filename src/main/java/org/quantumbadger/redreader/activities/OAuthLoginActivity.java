@@ -22,8 +22,11 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Message;
+import android.net.http.SslError;
 import android.webkit.ConsoleMessage;
 import android.webkit.CookieManager;
+import android.webkit.SslErrorHandler;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
@@ -33,19 +36,15 @@ import android.webkit.WebViewClient;
 import androidx.webkit.WebSettingsCompat;
 import androidx.webkit.WebViewFeature;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-
-import android.os.Message;
-import android.net.http.SslError;
-import android.webkit.SslErrorHandler;
-
 import org.quantumbadger.redreader.R;
 import org.quantumbadger.redreader.RedReader;
 import org.quantumbadger.redreader.common.PrefsUtility;
 import org.quantumbadger.redreader.common.TorCommon;
 import org.quantumbadger.redreader.reddit.api.RedditOAuth;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
 
 import info.guardianproject.netcipher.webkit.WebkitProxy;
 
@@ -68,9 +67,42 @@ public class OAuthLoginActivity extends ViewsBaseActivity {
 		PrefsUtility.applyTheme(this);
 		super.onCreate(savedInstanceState);
 
+
+		final Uri data = getIntent() != null ? getIntent().getData() : null;
+		if (data != null && REDREADER_SCHEME.equals(data.getScheme())) {
+			final Intent result = new Intent();
+			result.putExtra("url", data.toString());
+			setResult(123, result);
+			finish();
+			return;
+		}
+
+
+		final PrefsUtility.OAuthBrowser mode = PrefsUtility.pref_network_oauth_browser(getApplicationContext());
+		if (mode == PrefsUtility.OAuthBrowser.EXTERNAL) {
+			startExternalLogin();
+		} else {
+			startInternalLogin();
+		}
+	}
+
+	@Override
+	protected void onNewIntent(Intent intent) {
+		super.onNewIntent(intent);
+		final Uri data = intent != null ? intent.getData() : null;
+		if (data != null && REDREADER_SCHEME.equals(data.getScheme())) {
+			final Intent result = new Intent();
+			result.putExtra("url", data.toString());
+			setResult(123, result);
+			finish();
+		}
+	}
+
+
+	private void startInternalLogin() {
 		mWebView = new WebView(this);
 
-		// Tor proxy
+
 		if (TorCommon.isTorEnabled()) {
 			try {
 				final boolean ok = WebkitProxy.setProxy(
@@ -91,23 +123,22 @@ public class OAuthLoginActivity extends ViewsBaseActivity {
 			}
 		}
 
-		// 1) Cookies & storage must be fully enabled
+
 		final CookieManager cookieMgr = CookieManager.getInstance();
 		cookieMgr.setAcceptCookie(true);
-		// third-party cookies are required for many IdP flows
 		CookieManager.getInstance().setAcceptThirdPartyCookies(mWebView, true);
 
 		final WebSettings settings = mWebView.getSettings();
 		settings.setJavaScriptEnabled(true);
 		settings.setDomStorageEnabled(true);
 		settings.setDatabaseEnabled(true);
-		settings.setSupportMultipleWindows(true); // for popups/2FA
+		settings.setSupportMultipleWindows(true); // popups/2FA
 		settings.setJavaScriptCanOpenWindowsAutomatically(true);
 		settings.setLoadWithOverviewMode(true);
 		settings.setUseWideViewPort(true);
 		settings.setDisplayZoomControls(false);
 
-		// Optional but helps with recaptcha/challenges
+		// Recaptcha/challenges friendliness
 		if (WebViewFeature.isFeatureSupported(WebViewFeature.SAFE_BROWSING_ENABLE)) {
 			try {
 				WebSettingsCompat.setSafeBrowsingEnabled(settings, true);
@@ -117,21 +148,21 @@ public class OAuthLoginActivity extends ViewsBaseActivity {
 			settings.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
 		}
 
-		// 2) Use a mobile Chrome UA (many sites special-case WebView UA)
+		// Mobile Chrome UA (many sites special-case WebView UA)
 		settings.setUserAgentString(
 				"Mozilla/5.0 (Linux; Android " + Build.VERSION.RELEASE + ") "
 						+ "AppleWebKit/537.36 (KHTML, like Gecko) "
 						+ "Chrome/124.0.0.0 Mobile Safari/537.36"
 		);
 
-		// Remove/neutralize the X-Requested-With header (WebView adds it by default)
+		// Remove/neutralize X-Requested-With header (WebView adds it by default)
 		final Map<String, String> firstLoadHeaders = new HashMap<>();
-		firstLoadHeaders.put("X-Requested-With", ""); // override to empty
+		firstLoadHeaders.put("X-Requested-With", "");
 
 		mWebView.setWebChromeClient(new WebChromeClient() {
 			@Override
 			public boolean onCreateWindow(final WebView view, final boolean isDialog,
-				final boolean isUserGesture, final Message resultMsg) {
+										  final boolean isUserGesture, final Message resultMsg) {
 				// open popup targets inside the same webview
 				final WebView newWebView = new WebView(view.getContext());
 				newWebView.setWebViewClient(new WebViewClient());
@@ -148,11 +179,10 @@ public class OAuthLoginActivity extends ViewsBaseActivity {
 
 		mWebView.setWebViewClient(new WebViewClient() {
 			@Override
-			public boolean shouldOverrideUrlLoading(final WebView view, final WebResourceRequest
-					req) {
+			public boolean shouldOverrideUrlLoading(final WebView view, final WebResourceRequest req) {
 				final Uri url = req.getUrl();
 
-				// intercept the oauth redirect back to the app
+				// Intercept the oauth redirect back to the app (internal flow case)
 				if (Objects.equals(url.getScheme(), REDREADER_SCHEME)) {
 					final Intent intent = new Intent();
 					intent.putExtra("url", url.toString());
@@ -161,7 +191,7 @@ public class OAuthLoginActivity extends ViewsBaseActivity {
 					return true;
 				}
 
-				// keep everything else inside, but scrub X-Requested-With on every nav
+				// Keep everything else inside, but scrub X-Requested-With on every nav
 				final Map<String, String> headers = new HashMap<>();
 				headers.put("X-Requested-With", "");
 				view.loadUrl(url.toString(), headers);
@@ -169,8 +199,7 @@ public class OAuthLoginActivity extends ViewsBaseActivity {
 			}
 
 			@Override
-			public void onReceivedSslError(final WebView view, final SslErrorHandler handler, final
-			SslError error) {
+			public void onReceivedSslError(final WebView view, final SslErrorHandler handler, final SslError error) {
 				// be strict; do not proceed on SSL errors
 				handler.cancel();
 			}
@@ -178,14 +207,29 @@ public class OAuthLoginActivity extends ViewsBaseActivity {
 
 		setBaseActivityListing(mWebView);
 
-		// load the Reddit authorize URL with headers that neutralize X-Requested-With
+		// Load the Reddit authorize URL with headers that neutralize X-Requested-With
 		mWebView.loadUrl(RedditOAuth.getPromptUri().toString(), firstLoadHeaders);
+	}
+
+	// -------------------------
+	// External browser flow
+	// -------------------------
+	private void startExternalLogin() {
+		final Uri authUri = RedditOAuth.getPromptUri();
+		try {
+			startActivity(new Intent(Intent.ACTION_VIEW, authUri));
+			// Optional: minimal waiting view while browser does its thing
+			final android.widget.ProgressBar pb = new android.widget.ProgressBar(this);
+			setBaseActivityListing(pb);
+		} catch (Throwable t) {
+			// No external browser available? Fallback to internal.
+			startInternalLogin();
+		}
 	}
 
 	@Override
 	protected void onPause() {
 		super.onPause();
-
 		if (mWebView != null) {
 			mWebView.onPause();
 			mWebView.pauseTimers();
@@ -195,7 +239,6 @@ public class OAuthLoginActivity extends ViewsBaseActivity {
 	@Override
 	protected void onResume() {
 		super.onResume();
-
 		if (mWebView != null) {
 			mWebView.resumeTimers();
 			mWebView.onResume();
