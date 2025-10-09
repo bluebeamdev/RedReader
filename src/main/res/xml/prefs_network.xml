@@ -34,4 +34,13 @@
 
 	</PreferenceCategory>
 
+	<ListPreference
+			xmlns:app="http://schemas.android.com/apk/res-auto"
+			app:key="pref_network_oauth_browser"
+			app:title="@string/pref_title_oauth_browser"
+			app:summary="@string/pref_summary_oauth_browser"
+			app:entries="@array/pref_oauth_browser_entries"
+			app:entryValues="@array/pref_oauth_browser_values"
+			app:defaultValue="internal" />
+
 </PreferenceScreen>
