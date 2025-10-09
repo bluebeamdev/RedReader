@@ -19,10 +19,15 @@ package org.quantumbadger.redreader.common;
 
 import android.app.Activity;
 import android.content.Context;
+import androidx.preference.PreferenceManager;
 import android.content.res.Resources;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.MenuItem;
+import android.content.SharedPreferences;
+
+
+
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -57,6 +62,9 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public final class PrefsUtility {
 
+	public enum OAuthBrowser { INTERNAL, EXTERNAL }
+
+	private static final String PREF_KEY_OAUTH_BROWSER = "pref_network_oauth_browser";
 	private static SharedPrefsWrapper sharedPrefs;
 	private static Resources mRes;
 
@@ -65,6 +73,13 @@ public final class PrefsUtility {
 	}
 
 	@NonNull private static final AtomicReference<Locale> mDefaultLocale = new AtomicReference<>();
+
+	public static OAuthBrowser pref_network_oauth_browser(Context ctx) {
+		SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(ctx.getApplicationContext());
+		String raw = sp.getString(PREF_KEY_OAUTH_BROWSER, "internal");
+		if ("external".equalsIgnoreCase(raw)) return OAuthBrowser.EXTERNAL;
+		return OAuthBrowser.INTERNAL;
+	}
 
 	@Nullable
 	public static String getString(
@@ -152,6 +167,8 @@ public final class PrefsUtility {
 				|| key.equals(REDDIT_USER_AGREEMENT_PREF)
 				|| key.equals(context.getString(R.string.pref_reddit_client_id_override_key));
 	}
+
+
 
 	public static boolean isRestartRequired(final Context context, final String key) {
 		return context.getString(R.string.pref_appearance_twopane_key).equals(key)
