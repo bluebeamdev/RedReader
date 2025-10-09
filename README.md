@@ -6,7 +6,7 @@ An unofficial, open source Android client for Reddit forked from RedReader.
 Critical Bug Fixes 
 --------
 
-* Can now login.
+* Can now login. ( choose in Settings -> Network -> Authentication Options Choose between Webview ( default ) and external browser login ).
 * Can now play RedGifs Audio.
 
 Features
