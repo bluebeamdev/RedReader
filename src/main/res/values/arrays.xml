@@ -1335,4 +1335,16 @@
 		<item>@string/pref_behaviour_post_tap_action_title_comments</item>
 	</string-array>
 
+	<!-- login choice code -->
+
+	<string-array name="pref_oauth_browser_entries">
+		<item>@string/pref_entry_oauth_browser_internal</item>
+		<item>@string/pref_entry_oauth_browser_external</item>
+	</string-array>
+
+	<string-array name="pref_oauth_browser_values">
+		<item>internal</item>
+		<item>external</item>
+	</string-array>
+
 </resources>
