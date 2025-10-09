@@ -156,8 +156,24 @@
         <activity android:name=".activities.HtmlViewActivity"
                   android:configChanges="orientation|screenSize|keyboardHidden"/>
 
-        <activity android:name=".activities.OAuthLoginActivity"
-                  android:configChanges="orientation|screenSize|keyboardHidden"/>
+		<activity
+				android:name=".activities.OAuthLoginActivity"
+				android:configChanges="orientation|screenSize|keyboardHidden"
+				android:exported="true"
+				android:launchMode="singleTop">
+
+
+			<intent-filter>
+				<action android:name="android.intent.action.VIEW" />
+				<category android:name="android.intent.category.DEFAULT" />
+				<category android:name="android.intent.category.BROWSABLE" />
+				<data
+						android:scheme="redreader"
+						android:host="rr_oauth_redir" />
+			</intent-filter>
+
+		</activity>
+
 
         <activity android:name=".activities.AlbumListingActivity"
                   android:configChanges="orientation|screenSize|keyboardHidden"/>
