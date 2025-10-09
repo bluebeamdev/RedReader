@@ -7,7 +7,7 @@ Critical Bug Fixes
 --------
 
 * Can now login.
-  ( choose in Settings -> Network -> Authentication Options Choose between Webview ( default ) and external browser login ).
+  -Also added a choice in setting under Network to choose between Internal Browser login or External.
 * Can now play RedGifs Audio.
 
 Features
